@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { site } from "@/lib/site";
 
-export const runtime = "nodejs";
-
 const clean = (v: unknown, max = 200) =>
   String(v ?? "")
     .trim()
