@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import nodemailer from "nodemailer";
 import { site } from "@/lib/site";
+
+export const runtime = "nodejs";
 
 const clean = (v: unknown, max = 200) =>
   String(v ?? "")
@@ -11,7 +14,7 @@ export async function POST(req: Request) {
   if (!body)
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
 
-  // honeypot: botovi popune skriveno polje
+  // honeypot
   if (body.website) return NextResponse.json({ ok: true });
 
   const d = {
@@ -29,9 +32,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const key = process.env.RESEND_API_KEY;
-  const to = process.env.CONTACT_TO_EMAIL;
-  if (!key || !to)
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  const to = process.env.CONTACT_TO_EMAIL || user;
+  if (!user || !pass || !to)
     return NextResponse.json({ error: "Not configured" }, { status: 500 });
 
   const text = [
@@ -45,22 +49,20 @@ export async function POST(req: Request) {
     d.message || "(bez poruke)",
   ].join("\n");
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: `${site.name} <onboarding@resend.dev>`, // posle verifikacije domena: upit@tvojdomen.rs
-      to: [to],
-      reply_to: d.email || undefined,
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user, pass },
+    });
+    await transporter.sendMail({
+      from: `${site.name} <${user}>`,
+      to,
+      replyTo: d.email || undefined,
       subject: `Novi upit: ${d.from} → ${d.to} (${d.pet})`,
       text,
-    }),
-  });
-
-  if (!res.ok)
+    });
+    return NextResponse.json({ ok: true });
+  } catch {
     return NextResponse.json({ error: "Send failed" }, { status: 502 });
-  return NextResponse.json({ ok: true });
+  }
 }
