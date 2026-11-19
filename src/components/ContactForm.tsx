@@ -16,7 +16,13 @@ export default function ContactForm() {
     if (status === "loading") return;
     setStatus("loading");
     const form = e.currentTarget;
-    const data = Object.fromEntries(new FormData(form));
+    const d = Object.fromEntries(new FormData(form)) as Record<string, string>;
+
+    if (d.website) {
+      setStatus("ok");
+      return;
+    } // honeypot
+
     try {
       const res = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -25,14 +31,21 @@ export default function ContactForm() {
           Accept: "application/json",
         },
         body: JSON.stringify({
-          ...data,
           access_key: process.env.NEXT_PUBLIC_WEB3FORMS_KEY,
-          subject: "Novi upit sa sajta Spa Trans",
-          from_name: "Spa Trans sajt",
+          subject: `Novi upit: ${d.from} → ${d.to} (${d.pet})`,
+          from_name: "Šapa Trans sajt",
+          name: d.name,
+          phone: d.phone,
+          ...(d.email ? { email: d.email } : {}),
+          pet: d.pet,
+          date: d.date || "-",
+          from: d.from,
+          to: d.to,
+          message: d.message || "(bez poruke)",
         }),
       });
-      const result = await res.json();
-      if (!result.success) throw new Error();
+      const json = await res.json();
+      if (!json.success) throw new Error();
       setStatus("ok");
       form.reset();
     } catch {
