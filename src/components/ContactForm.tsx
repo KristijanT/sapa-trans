@@ -18,12 +18,21 @@ export default function ContactForm() {
     const form = e.currentTarget;
     const data = Object.fromEntries(new FormData(form));
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          access_key: process.env.NEXT_PUBLIC_WEB3FORMS_KEY,
+          subject: "Novi upit sa sajta Spa Trans",
+          from_name: "Spa Trans sajt",
+        }),
       });
-      if (!res.ok) throw new Error();
+      const result = await res.json();
+      if (!result.success) throw new Error();
       setStatus("ok");
       form.reset();
     } catch {
@@ -71,9 +80,9 @@ export default function ContactForm() {
           className="grid gap-4 rounded-3xl bg-white p-6 shadow-xl sm:grid-cols-2 sm:p-8 lg:col-span-3"
         >
           <input
-            name="website"
+            type="checkbox"
+            name="botcheck"
             tabIndex={-1}
-            autoComplete="off"
             className="hidden"
             aria-hidden="true"
           />
